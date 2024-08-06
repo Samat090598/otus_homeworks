@@ -1,4 +1,4 @@
-module github.com/Samat090598/homework_1
+module github.com/Samat090598/otus_homeworks
 
 go 1.22
 
