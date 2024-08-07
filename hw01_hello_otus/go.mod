@@ -1,4 +1,4 @@
-module github.com/Samat090598/otus_homeworks
+module github.com/Samat090598/otus_homeworks/hw01_hello_otus
 
 go 1.22
 
