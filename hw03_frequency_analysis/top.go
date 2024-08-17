@@ -39,7 +39,7 @@ func Top10(text string) []string {
 		return wordInfos[i].count > wordInfos[j].count
 	})
 
-	var result []string
+	result := make([]string, 0, 10)
 	for _, word := range wordInfos {
 		result = append(result, word.word)
 	}
