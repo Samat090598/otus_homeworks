@@ -63,9 +63,9 @@ func TestTop10(t *testing.T) {
 		} else {
 			expected := []string{
 				"by",             // 2
+				"Don't",          // 1
 				"communicate",    // 1
 				"communicating.", // 1
-				"don't",          // 1
 				"memory",         // 1
 				"memory;",        // 1
 				"share",          // 1
