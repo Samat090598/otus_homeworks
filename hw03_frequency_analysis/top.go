@@ -7,7 +7,8 @@ import (
 )
 
 // Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+const taskWithAsteriskIsCompleted = false
+
 var re = regexp.MustCompile(`^[^\w\sа-яА-ЯёЁ]+|[^\w\sа-яА-ЯёЁ]+$`)
 
 type wordInfo struct {
@@ -29,7 +30,6 @@ func Top10(text string) []string {
 			if len(word) < 1 {
 				continue
 			}
-
 		}
 
 		if count, found := wordFrequencies[word]; found {
