@@ -1,9 +1,14 @@
 package hw03frequencyanalysis
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 )
+
+// Change to true if needed.
+var taskWithAsteriskIsCompleted = false
+var re = regexp.MustCompile(`^[^\w\sа-яА-ЯёЁ]+|[^\w\sа-яА-ЯёЁ]+$`)
 
 type wordInfo struct {
 	word  string
@@ -19,6 +24,14 @@ func Top10(text string) []string {
 	wordFrequencies := make(map[string]int)
 
 	for _, word := range words {
+		if taskWithAsteriskIsCompleted {
+			word = re.ReplaceAllString(strings.ToLower(word), "")
+			if len(word) < 1 {
+				continue
+			}
+
+		}
+
 		if count, found := wordFrequencies[word]; found {
 			wordFrequencies[word] = count + 1
 			continue
@@ -40,8 +53,8 @@ func Top10(text string) []string {
 	})
 
 	result := make([]string, 0, 10)
-	for _, word := range wordInfos {
-		result = append(result, word.word)
+	for _, wordInfo := range wordInfos {
+		result = append(result, wordInfo.word)
 	}
 
 	if len(result) < 11 {
