@@ -48,6 +48,19 @@ func TestTop10(t *testing.T) {
 		require.Len(t, Top10(""), 0)
 	})
 
+	t.Run("fewer than 10 unique words", func(t *testing.T) {
+		require.Equal(t, Top10("Don't communicate by sharing memory; share memory by communicating."), []string{
+			"by",             // 2
+			"Don't",          // 1
+			"communicate",    // 1
+			"communicating.", // 1
+			"memory",         // 1
+			"memory;",        // 1
+			"share",          // 1
+			"sharing",        // 1
+		})
+	})
+
 	t.Run("positive test", func(t *testing.T) {
 		if taskWithAsteriskIsCompleted {
 			expected := []string{
