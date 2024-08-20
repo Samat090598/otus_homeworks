@@ -57,9 +57,9 @@ func Top10(text string) []string {
 		result = append(result, wordInfo.word)
 	}
 
-	if len(result) < 11 {
-		return result
+	if len(result) > 10 {
+		return result[:10]
 	}
 
-	return result[:10]
+	return result
 }
