@@ -68,9 +68,9 @@ func TestCache(t *testing.T) {
 	t.Run("delete old elements", func(t *testing.T) {
 		c := NewCache(2)
 
-		c.Set("aaa", 100)	//{{aaa, 100}}
-		c.Set("bbb", 200)	//{{bbb, 200}, {aaa, 100}}
-		c.Set("ccc", 300)	//{{ccc, 300}, {bbb, 200}}
+		c.Set("aaa", 100) // {{aaa, 100}}
+		c.Set("bbb", 200) // {{bbb, 200}, {aaa, 100}}
+		c.Set("ccc", 300) // {{ccc, 300}, {bbb, 200}}
 
 		_, ok := c.Get("aaa")
 		require.False(t, ok)
@@ -83,8 +83,8 @@ func TestCache(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, 300, val)
 
-		c.Set("bbb", 400)	//{{bbb, 400}, {ccc, 300}}
-		c.Set("aaa", 100)	//{{aaa, 100}, {bbb, 400}}
+		c.Set("bbb", 400) // {{bbb, 400}, {ccc, 300}}
+		c.Set("aaa", 100) // {{aaa, 100}, {bbb, 400}}
 
 		_, ok = c.Get("ccc")
 		require.False(t, ok)
@@ -97,8 +97,8 @@ func TestCache(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, 100, val)
 
-		c.Get("bbb")		//{{bbb, 400}, {aaa, 100}}
-		c.Set("ccc", 300)	//{{ccc, 300}, {bbb, 400}}
+		c.Get("bbb")      // {{bbb, 400}, {aaa, 100}}
+		c.Set("ccc", 300) // {{ccc, 300}, {bbb, 400}}
 
 		_, ok = c.Get("aaa")
 		require.False(t, ok)
