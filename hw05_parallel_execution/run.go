@@ -3,6 +3,7 @@ package hw05parallelexecution
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 )
 
 var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
@@ -12,27 +13,27 @@ type Task func() error
 // Run starts tasks in n goroutines and stops its work when receiving m errors from tasks.
 func Run(tasks []Task, n int, m int) error {
 	var (
-		wg      sync.WaitGroup
-		tasksCh = make(chan Task, len(tasks))
-		errCh   = make(chan struct{}, m)
-		stopCh  = make(chan struct{})
+		wg       sync.WaitGroup
+		errCount int64
+		taskChan = make(chan Task)
 	)
+
+	if m < 1 {
+		m = 1
+	}
 
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-
 		go func() {
 			defer wg.Done()
-
-			for task := range tasksCh {
-				select {
-				case <-stopCh:
+			for task := range taskChan {
+				if int(atomic.LoadInt64(&errCount)) >= m {
 					return
-				default:
-					err := task()
-					if err != nil {
-						errCh <- struct{}{}
-					}
+				}
+
+				err := task()
+				if err != nil {
+					atomic.AddInt64(&errCount, 1)
 				}
 			}
 		}()
@@ -40,27 +41,18 @@ func Run(tasks []Task, n int, m int) error {
 
 	go func() {
 		for _, task := range tasks {
-			tasksCh <- task
-		}
-		close(tasksCh)
-	}()
-
-	errCount := 0
-	go func() {
-		for range errCh {
-			errCount++
-			if errCount >= m {
-				stopCh <- struct{}{}
-				close(stopCh)
-				return
+			if int(atomic.LoadInt64(&errCount)) >= m {
+				break
 			}
+
+			taskChan <- task
 		}
+		close(taskChan)
 	}()
 
 	wg.Wait()
-	close(errCh)
 
-	if errCount >= m {
+	if int(atomic.LoadInt64(&errCount)) >= m {
 		return ErrErrorsLimitExceeded
 	}
 
