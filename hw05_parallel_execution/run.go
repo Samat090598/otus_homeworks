@@ -15,7 +15,7 @@ func Run(tasks []Task, n int, m int) error {
 	var (
 		wg       sync.WaitGroup
 		errCount int64
-		taskChan = make(chan Task)
+		taskChan = make(chan Task, len(tasks))
 	)
 
 	if m < 1 {
@@ -41,10 +41,6 @@ func Run(tasks []Task, n int, m int) error {
 
 	go func() {
 		for _, task := range tasks {
-			if int(atomic.LoadInt64(&errCount)) >= m {
-				break
-			}
-
 			taskChan <- task
 		}
 		close(taskChan)
