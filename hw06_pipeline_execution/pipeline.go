@@ -15,14 +15,14 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 			defer close(out)
 			for {
 				select {
-				case <-done: 
+				case <-done:
 					return
-				case v, ok := <-in: 
-					if !ok { 
+				case v, ok := <-in:
+					if !ok {
 						return
 					}
 					select {
-					case <-done: 
+					case <-done:
 						return
 					case out <- v:
 					}
