@@ -20,10 +20,6 @@ type ValidationError struct {
 var (
 	ErrInvalidIncomingValue  = errors.New("invalid incoming value, expected structure")
 	ErrInvalidValidationTag  = errors.New("invalid validation tag")
-	ErrIncorrectLengthFormat = errors.New("incorrect length format")
-
-	ErrIncorrectMinFormat = errors.New("incorrect min format")
-	ErrIncorrectMaxFormat = errors.New("incorrect max format")
 )
 
 // Validation errors
@@ -119,7 +115,7 @@ func validate[T validationType](value T, validators []string) (error, error) {
 			if validator[0] == "len" {
 				length, err := strconv.Atoi(validator[1])
 				if err != nil {
-					return nil, ErrIncorrectLengthFormat
+					return nil, fmt.Errorf("parse len to int err: %w", err)
 				}
 
 				if utf8.RuneCountInString(val) != length {
@@ -155,7 +151,7 @@ func validate[T validationType](value T, validators []string) (error, error) {
 			if validator[0] == "min" {
 				min, err := strconv.Atoi(validator[1])
 				if err != nil {
-					return nil, ErrIncorrectMinFormat
+					return nil, fmt.Errorf("parse min to int err: %w", err)
 				}
 
 				if val < min {
@@ -165,12 +161,12 @@ func validate[T validationType](value T, validators []string) (error, error) {
 			}
 
 			if validator[0] == "max" {
-				min, err := strconv.Atoi(validator[1])
+				max, err := strconv.Atoi(validator[1])
 				if err != nil {
-					return nil, ErrIncorrectMaxFormat
+					return nil, fmt.Errorf("parse max to int err: %w", err)
 				}
 
-				if val < min {
+				if val < max {
 					fieldErrors = fmt.Errorf("%w, %w", fieldErrors, ErrMaxNotMet)
 					continue
 				}
