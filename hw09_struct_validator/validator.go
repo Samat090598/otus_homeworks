@@ -174,7 +174,7 @@ func validateRegexp(validator []string, value string, fieldErrors *error) error 
 			return fmt.Errorf("regexp.Compile err: %w", err)
 		}
 
-		ok := re.MatchString(validator[1])
+		ok := re.MatchString(value)
 		if !ok {
 			if *fieldErrors != nil {
 				*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrIncorrectStrContent)
