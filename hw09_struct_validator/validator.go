@@ -3,6 +3,7 @@ package hw09structvalidator
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -68,7 +69,9 @@ func Validate(v interface{}) error {
 			if kind == reflect.String || kind == reflect.Int {
 				fieldErrors, err := validate(reflectVal.String(), validators)
 				if err != nil {
-					return fmt.Errorf("validate %s value err: %w", fieldName, err)
+					err = fmt.Errorf("validate %s value err: %w", fieldName, err)
+					slog.Error(err.Error())
+					return err
 				}
 
 				if fieldErrors != nil {
@@ -82,7 +85,9 @@ func Validate(v interface{}) error {
 				for j := 0; j < reflectVal.Len(); j++ {
 					fieldErrors, err := validate(reflectVal.Index(j).String(), validators)
 					if err != nil {
-						return fmt.Errorf("validate %s %d elem err: %w", fieldName, j, err)
+						err = fmt.Errorf("validate %s %d elem err: %w", fieldName, j, err)
+						slog.Error(err.Error())
+						return err
 					}
 
 					if fieldErrors != nil {
@@ -138,21 +143,13 @@ func validate[T validationType](value T, validators []string) (error, error) {
 				continue
 			}
 
-			if validator[0] == "in" {
-				expectedValues := strings.Split(validator[1], ",")
-				var isSuccess bool
-				for j := 0; j < len(expectedValues); j++ {
-					if expectedValues[i] == val {
-						isSuccess = true
-						break
-					}
-				}
+			validateErr, err := validateIn(validator, value)
+			if err != nil {
+				return nil, err
+			}
 
-				if !isSuccess {
-					fieldErrors = fmt.Errorf("%w, %w", fieldErrors, ErrUnexpectedValue)
-				}
-
-				continue
+			if validateErr != nil {
+				fieldErrors = fmt.Errorf("%w, %w", fieldErrors, ErrMaxNotMet)
 			}
 		case int:
 			if validator[0] == "min" {
@@ -179,29 +176,53 @@ func validate[T validationType](value T, validators []string) (error, error) {
 				}
 			}
 
-			if validator[0] == "in" {
-				expectedValues := strings.Split(validator[1], ",")
-				var isSuccess bool
-				for j := 0; j < len(expectedValues); j++ {
-					expectedValue, err := strconv.Atoi(expectedValues[i])
-					if err != nil {
-						return nil, fmt.Errorf("parse expected value to int err: %w", err)
-					}
+			validateErr, err := validateIn(validator, value)
+			if err != nil {
+				return nil, err
+			}
 
-					if expectedValue == val {
-						isSuccess = true
-						break
-					}
-				}
-
-				if !isSuccess {
-					fieldErrors = fmt.Errorf("%w, %w", fieldErrors, ErrUnexpectedValue)
-				}
-
-				continue
+			if validateErr != nil {
+				fieldErrors = fmt.Errorf("%w, %w", fieldErrors, ErrMaxNotMet)
 			}
 		}
 	}
 
 	return fieldErrors, nil
+}
+
+func validateIn[T validationType](validator []string, value T) (error, error) {
+	if validator[0] == "in" {
+		expectedValues := strings.Split(validator[1], ",")
+		var isSuccess bool
+
+		switch val := any(value).(type) {
+		case string:
+			for i := 0; i < len(expectedValues); i++ {
+				if expectedValues[i] == val {
+					isSuccess = true
+					break
+				}
+			}
+		case int:
+			for i := 0; i < len(expectedValues); i++ {
+				expectedValue, err := strconv.Atoi(expectedValues[i])
+				if err != nil {
+					return nil, fmt.Errorf("parse expected value to int err: %w", err)
+				}
+
+				if expectedValue == val {
+					isSuccess = true
+					break
+				}
+			}
+		default:
+			return nil, nil
+		}
+
+		if !isSuccess {
+			return ErrUnexpectedValue, nil
+		}
+	}
+
+	return nil, nil
 }
