@@ -38,7 +38,7 @@ func (v ValidationErrors) Error() string {
 	var err string
 
 	for i := 0; i < len(v); i++ {
-		err += fmt.Sprintf("%s errors: %s;", v[i].Field, v[i].Err.Error())
+		err += fmt.Sprintf("%s errors: %s; ", v[i].Field, v[i].Err.Error())
 	}
 
 	return err
@@ -95,7 +95,7 @@ func Validate(v interface{}) error {
 				continue
 			}
 
-			if kind == reflect.Array {
+			if kind == reflect.Slice {
 				var (
 					elemKind    = tp.Elem().Kind()
 					fieldErrors error
