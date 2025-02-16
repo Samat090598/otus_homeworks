@@ -35,7 +35,13 @@ var (
 type ValidationErrors []ValidationError
 
 func (v ValidationErrors) Error() string {
-	panic("implement me")
+	var err string
+
+	for i := 0; i < len(v); i++ {
+		err += fmt.Sprintf("field: %s, errors: %s;", v[i].Field, v[i].Err.Error())
+	}
+
+	return err
 }
 
 type validationType interface {
@@ -97,7 +103,6 @@ func Validate(v interface{}) error {
 
 	}
 
-	// Place your code here.
 	return validationErrors
 }
 
