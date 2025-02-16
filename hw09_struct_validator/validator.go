@@ -38,7 +38,7 @@ func (v ValidationErrors) Error() string {
 	var err string
 
 	for i := 0; i < len(v); i++ {
-		err += fmt.Sprintf("field: %s, errors: %s;", v[i].Field, v[i].Err.Error())
+		err += fmt.Sprintf("%s errors: %s;", v[i].Field, v[i].Err.Error())
 	}
 
 	return err
@@ -77,7 +77,7 @@ func Validate(v interface{}) error {
 				}
 
 				if fieldErrors != nil {
-					validationErrors = append(validationErrors, ValidationError{Field: fieldName})
+					validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
 				}
 
 				continue
@@ -93,7 +93,7 @@ func Validate(v interface{}) error {
 					}
 
 					if fieldErrors != nil {
-						validationErrors = append(validationErrors, ValidationError{Field: fieldName})
+						validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
 					}
 				}
 
