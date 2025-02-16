@@ -49,11 +49,11 @@ type validationType interface {
 }
 
 func Validate(v interface{}) error {
-	validationErrors := make(ValidationErrors, 0)
-
 	if reflect.TypeOf(v).Kind() != reflect.Struct {
 		return ErrInvalidIncomingValue
 	}
+
+	validationErrors := make(ValidationErrors, 0)
 
 	st := reflect.TypeOf(v)
 	for i := 0; i < st.NumField(); i++ {
@@ -69,7 +69,17 @@ func Validate(v interface{}) error {
 			)
 
 			if kind == reflect.String || kind == reflect.Int {
-				fieldErrors, err := validate(reflectVal.String(), validators)
+				var (
+					fieldErrors error
+					err         error
+				)
+
+				if kind == reflect.String {
+					fieldErrors, err = validate(reflectVal.String(), validators)
+				} else {
+					fieldErrors, err = validate(int(reflectVal.Int()), validators)
+				}
+
 				if err != nil {
 					err = fmt.Errorf("validate %s value err: %w", fieldName, err)
 					slog.Error(err.Error())
@@ -84,25 +94,40 @@ func Validate(v interface{}) error {
 			}
 
 			if kind == reflect.Array {
-				var fieldErrors error
+				var (
+					elemKind    = tp.Elem().Kind()
+					fieldErrors error
+				)
 
-				for j := 0; j < reflectVal.Len(); j++ {
-					elemErrors, err := validate(reflectVal.Index(j).String(), validators)
-					if err != nil {
-						err = fmt.Errorf("validate %s %d elem err: %w", fieldName, j, err)
-						slog.Error(err.Error())
-						return err
-					}
+				if elemKind == reflect.String || elemKind == reflect.Int {
+					for j := 0; j < reflectVal.Len(); j++ {
+						var (
+							elemErrors error
+							err        error
+						)
 
-					if elemErrors != nil {
-						elemErrors = fmt.Errorf("%d elem errors: %w", j, elemErrors)
-
-						if fieldErrors == nil {
-							fieldErrors = elemErrors
-							continue
+						if elemKind == reflect.String {
+							elemErrors, err = validate(reflectVal.Index(j).String(), validators)
+						} else {
+							elemErrors, err = validate(int(reflectVal.Index(j).Int()), validators)
 						}
 
-						fieldErrors = fmt.Errorf("%w, %w", fieldErrors, elemErrors)
+						if err != nil {
+							err = fmt.Errorf("validate %s %d elem err: %w", fieldName, j, err)
+							slog.Error(err.Error())
+							return err
+						}
+
+						if elemErrors != nil {
+							elemErrors = fmt.Errorf("%d elem errors: %w", j, elemErrors)
+
+							if fieldErrors == nil {
+								fieldErrors = elemErrors
+								continue
+							}
+
+							fieldErrors = fmt.Errorf("%w, %w", fieldErrors, elemErrors)
+						}
 					}
 				}
 
