@@ -84,20 +84,27 @@ func Validate(v interface{}) error {
 			}
 
 			if kind == reflect.Array {
+				var fieldErrors error
+
 				for j := 0; j < reflectVal.Len(); j++ {
-					fieldErrors, err := validate(reflectVal.Index(j).String(), validators)
+					elemErrors, err := validate(reflectVal.Index(j).String(), validators)
 					if err != nil {
 						err = fmt.Errorf("validate %s %d elem err: %w", fieldName, j, err)
 						slog.Error(err.Error())
 						return err
 					}
 
-					if fieldErrors != nil {
-						validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
+					if elemErrors != nil {
+						if fieldErrors == nil {
+							fieldErrors = elemErrors
+							continue
+						}
+
+						fieldErrors = fmt.Errorf("%w, %w", fieldErrors, elemErrors)
 					}
 				}
 
-				continue
+				validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
 			}
 		}
 
