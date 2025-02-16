@@ -95,6 +95,8 @@ func Validate(v interface{}) error {
 					}
 
 					if elemErrors != nil {
+						elemErrors = fmt.Errorf("%d elem errors: %w", j, elemErrors)
+
 						if fieldErrors == nil {
 							fieldErrors = elemErrors
 							continue
