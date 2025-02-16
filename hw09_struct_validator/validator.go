@@ -55,7 +55,9 @@ func Validate(v interface{}) error {
 
 	validationErrors := make(ValidationErrors, 0)
 
+	val := reflect.ValueOf(v)
 	st := reflect.TypeOf(v)
+
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Field(i)
 
@@ -63,7 +65,7 @@ func Validate(v interface{}) error {
 			var (
 				tp         = field.Type
 				kind       = tp.Kind()
-				reflectVal = reflect.ValueOf(field)
+				reflectVal = val.Field(i)
 				fieldName  = field.Name
 				validators = strings.Split(validateTag, "|")
 			)
