@@ -196,12 +196,13 @@ func validateLen(validator []string, value string, fieldErrors *error) error {
 			return fmt.Errorf("parse len to int err: %w", err)
 		}
 
-		if utf8.RuneCountInString(value) != length {
-			if *fieldErrors != nil {
-				*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrIncorrectStrLength)
-				return nil
-			}
+		if utf8.RuneCountInString(value) == length {
+			return nil
+		}
 
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrIncorrectStrLength)
+		} else {
 			*fieldErrors = ErrIncorrectStrLength
 		}
 	}
@@ -217,12 +218,13 @@ func validateRegexp(validator []string, value string, fieldErrors *error) error 
 		}
 
 		ok := re.MatchString(value)
-		if !ok {
-			if *fieldErrors != nil {
-				*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrIncorrectStrContent)
-				return nil
-			}
+		if ok {
+			return nil
+		}
 
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrIncorrectStrContent)
+		} else {
 			*fieldErrors = ErrIncorrectStrContent
 		}
 	}
@@ -232,17 +234,18 @@ func validateRegexp(validator []string, value string, fieldErrors *error) error 
 
 func validateMin(validator []string, value int, fieldErrors *error) error {
 	if validator[0] == "min" {
-		min, err := strconv.Atoi(validator[1])
+		minimum, err := strconv.Atoi(validator[1])
 		if err != nil {
 			return fmt.Errorf("parse min to int err: %w", err)
 		}
 
-		if value < min {
-			if *fieldErrors != nil {
-				*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrMinNotMet)
-				return nil
-			}
+		if value >= minimum {
+			return nil
+		}
 
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrMinNotMet)
+		} else {
 			*fieldErrors = ErrMinNotMet
 		}
 	}
@@ -252,17 +255,18 @@ func validateMin(validator []string, value int, fieldErrors *error) error {
 
 func validateMax(validator []string, value int, fieldErrors *error) error {
 	if validator[0] == "max" {
-		max, err := strconv.Atoi(validator[1])
+		maximum, err := strconv.Atoi(validator[1])
 		if err != nil {
 			return fmt.Errorf("parse max to int err: %w", err)
 		}
 
-		if value > max {
-			if *fieldErrors != nil {
-				*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrMaxNotMet)
-				return nil
-			}
+		if value <= maximum {
+			return nil
+		}
 
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrMaxNotMet)
+		} else {
 			*fieldErrors = ErrMaxNotMet
 		}
 	}
@@ -305,10 +309,9 @@ func validateIn[T validationType](validator []string, value T, fieldErrors *erro
 	if !isSuccess {
 		if *fieldErrors != nil {
 			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrUnexpectedValue)
-			return nil
+		} else {
+			*fieldErrors = ErrUnexpectedValue
 		}
-
-		*fieldErrors = ErrUnexpectedValue
 	}
 
 	return nil
