@@ -38,7 +38,7 @@ func (v ValidationErrors) Error() string {
 	var err string
 
 	for i := 0; i < len(v); i++ {
-		err += fmt.Sprintf("%s errors: %s; ", v[i].Field, v[i].Err.Error())
+		err += fmt.Sprintf("%v; ", v[i])
 	}
 
 	return err
