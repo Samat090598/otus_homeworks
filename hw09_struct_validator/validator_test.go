@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type UserRole string
@@ -57,7 +58,12 @@ func TestValidate(t *testing.T) {
 				Phones: []string{"11111111111", "2222222222", "333333333"},
 			},
 			expectedErr: fmt.Errorf("{ID %w}; {Age %w}; {Email %w}; {Role %w}; {Phones 1 elem errors: %w, 2 elem errors: %w}; ",
-				ErrIncorrectStrLength, ErrMinNotMet, ErrIncorrectStrContent, ErrUnexpectedValue, ErrIncorrectStrLength, ErrIncorrectStrLength),
+				ErrIncorrectStrLength,
+				ErrMinNotMet,
+				ErrIncorrectStrContent,
+				ErrUnexpectedValue,
+				ErrIncorrectStrLength,
+				ErrIncorrectStrLength),
 		},
 		{
 			in:          App{Version: "123456"},

@@ -16,13 +16,13 @@ type ValidationError struct {
 	Err   error
 }
 
-// System errors
+// System errors.
 var (
 	ErrInvalidIncomingValue = errors.New("invalid incoming value, expected structure")
 	ErrInvalidValidationTag = errors.New("invalid validation tag")
 )
 
-// Validation errors
+// Validation errors.
 var (
 	ErrIncorrectStrLength  = errors.New("the length of the string does not match the required one")
 	ErrIncorrectStrContent = errors.New("the string does not meet the requirements of the regular expression")
@@ -61,85 +61,86 @@ func Validate(v interface{}) error {
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Field(i)
 
-		if validateTag, ok := field.Tag.Lookup("validate"); ok {
-			var (
-				tp         = field.Type
-				kind       = tp.Kind()
-				reflectVal = val.Field(i)
-				fieldName  = field.Name
-				validators = strings.Split(validateTag, "|")
-			)
+		validateTag, ok := field.Tag.Lookup("validate")
+		if !ok {
+			continue
+		}
 
-			if kind == reflect.String || kind == reflect.Int {
-				var (
-					fieldErrors error
-					err         error
-				)
+		var (
+			tp         = field.Type
+			kind       = tp.Kind()
+			reflectVal = val.Field(i)
+			fieldName  = field.Name
+			validators = strings.Split(validateTag, "|")
+		)
 
-				if kind == reflect.String {
-					fieldErrors, err = validate(reflectVal.String(), validators)
-				} else {
-					fieldErrors, err = validate(int(reflectVal.Int()), validators)
-				}
-
-				if err != nil {
-					err = fmt.Errorf("validate %s value err: %w", fieldName, err)
-					slog.Error(err.Error())
-					return err
-				}
-
-				if fieldErrors != nil {
-					validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
-				}
-
-				continue
+		if kind == reflect.String || kind == reflect.Int {
+			fieldErrors, err := validateElem(kind, reflectVal, validators, fieldName, 0)
+			if err != nil {
+				slog.Error(err.Error())
+				return err
 			}
 
-			if kind == reflect.Slice {
-				var (
-					elemKind    = tp.Elem().Kind()
-					fieldErrors error
-				)
+			if fieldErrors != nil {
+				validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
+			}
 
-				if elemKind == reflect.String || elemKind == reflect.Int {
-					for j := 0; j < reflectVal.Len(); j++ {
-						var (
-							elemErrors error
-							err        error
-						)
+			continue
+		}
 
-						if elemKind == reflect.String {
-							elemErrors, err = validate(reflectVal.Index(j).String(), validators)
-						} else {
-							elemErrors, err = validate(int(reflectVal.Index(j).Int()), validators)
-						}
+		if kind == reflect.Slice {
+			var (
+				elemKind    = tp.Elem().Kind()
+				fieldErrors error
+			)
 
-						if err != nil {
-							err = fmt.Errorf("validate %s %d elem err: %w", fieldName, j, err)
-							slog.Error(err.Error())
-							return err
-						}
-
-						if elemErrors != nil {
-							elemErrors = fmt.Errorf("%d elem errors: %w", j, elemErrors)
-
-							if fieldErrors == nil {
-								fieldErrors = elemErrors
-								continue
-							}
-
-							fieldErrors = fmt.Errorf("%w, %w", fieldErrors, elemErrors)
-						}
+			if elemKind == reflect.String || elemKind == reflect.Int {
+				for j := 0; j < reflectVal.Len(); j++ {
+					elemErrors, err := validateElem(elemKind, reflectVal.Index(j), validators, fieldName, j)
+					if err != nil {
+						slog.Error(err.Error())
+						return err
 					}
+
+					combineErrors(&fieldErrors, elemErrors, j)
 				}
 
 				validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
 			}
 		}
-
 	}
 
 	return validationErrors
+}
+
+func validateElem(elemKind reflect.Kind, value reflect.Value,
+	validators []string, fieldName string, idx int,
+) (elemErrors error, err error) {
+	if elemKind == reflect.String {
+		elemErrors, err = validate(value.String(), validators)
+	} else {
+		elemErrors, err = validate(int(value.Int()), validators)
+	}
+
+	if err != nil {
+		err = fmt.Errorf("validate %s %d elem err: %w", fieldName, idx, err)
+		return
+	}
+
+	return
+}
+
+func combineErrors(fieldErrors *error, elemErrors error, idx int) {
+	if elemErrors != nil {
+		elemErrors = fmt.Errorf("%d elem errors: %w", idx, elemErrors)
+
+		if *fieldErrors == nil {
+			*fieldErrors = elemErrors
+			return
+		}
+
+		*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, elemErrors)
+	}
 }
 
 func validate[T validationType](value T, validators []string) (error, error) {
@@ -270,42 +271,44 @@ func validateMax(validator []string, value int, fieldErrors *error) error {
 }
 
 func validateIn[T validationType](validator []string, value T, fieldErrors *error) error {
-	if validator[0] == "in" {
-		expectedValues := strings.Split(validator[1], ",")
-		var isSuccess bool
+	if validator[0] != "in" {
+		return nil
+	}
 
-		switch val := any(value).(type) {
-		case string:
-			for i := 0; i < len(expectedValues); i++ {
-				if expectedValues[i] == val {
-					isSuccess = true
-					break
-				}
-			}
-		case int:
-			for i := 0; i < len(expectedValues); i++ {
-				expectedValue, err := strconv.Atoi(expectedValues[i])
-				if err != nil {
-					return fmt.Errorf("parse expected value to int err: %w", err)
-				}
+	expectedValues := strings.Split(validator[1], ",")
+	var isSuccess bool
 
-				if expectedValue == val {
-					isSuccess = true
-					break
-				}
+	switch val := any(value).(type) {
+	case string:
+		for i := 0; i < len(expectedValues); i++ {
+			if expectedValues[i] == val {
+				isSuccess = true
+				break
 			}
-		default:
+		}
+	case int:
+		for i := 0; i < len(expectedValues); i++ {
+			expectedValue, err := strconv.Atoi(expectedValues[i])
+			if err != nil {
+				return fmt.Errorf("parse expected value to int err: %w", err)
+			}
+
+			if expectedValue == val {
+				isSuccess = true
+				break
+			}
+		}
+	default:
+		return nil
+	}
+
+	if !isSuccess {
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrUnexpectedValue)
 			return nil
 		}
 
-		if !isSuccess {
-			if *fieldErrors != nil {
-				*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrUnexpectedValue)
-				return nil
-			}
-
-			*fieldErrors = ErrUnexpectedValue
-		}
+		*fieldErrors = ErrUnexpectedValue
 	}
 
 	return nil
