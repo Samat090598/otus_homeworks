@@ -2,21 +2,10 @@ package hw10programoptimization
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 )
-
-type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
-}
 
 type DomainStat map[string]int
 
@@ -35,7 +24,7 @@ func getUsers(r io.Reader) (result users, err error) {
 	var user User
 	i := 0
 	for scanner.Scan() {
-		if err = json.Unmarshal(scanner.Bytes(), &user); err != nil {
+		if err = user.parse(scanner.Text()); err != nil {
 			return
 		}
 		result[i] = user
