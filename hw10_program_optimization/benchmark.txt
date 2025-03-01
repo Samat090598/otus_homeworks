@@ -1,0 +1,15 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/Samat090598/otus_homeworks/hw10_program_optimization
+cpu: Apple M1 Pro
+                │  before.txt  │              after.txt              │
+                │    sec/op    │   sec/op     vs base                │
+GetDomainStat-8   79.797m ± 1%   7.245m ± 1%  -90.92% (p=0.000 n=10)
+
+                │   before.txt   │              after.txt               │
+                │      B/op      │     B/op      vs base                │
+GetDomainStat-8   129.743Mi ± 0%   1.913Mi ± 0%  -98.53% (p=0.000 n=10)
+
+                │  before.txt  │              after.txt              │
+                │  allocs/op   │  allocs/op   vs base                │
+GetDomainStat-8   1700.1k ± 0%   200.0k ± 0%  -88.23% (p=0.000 n=10)
