@@ -3,9 +3,10 @@ package hw10programoptimization
 import (
 	"bufio"
 	"fmt"
-	"github.com/mailru/easyjson"
 	"io"
 	"strings"
+
+	"github.com/mailru/easyjson" //nolint:depguard
 )
 
 type DomainStat map[string]int
