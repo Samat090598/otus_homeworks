@@ -3,6 +3,7 @@ package hw10programoptimization
 import (
 	"bufio"
 	"fmt"
+	"github.com/mailru/easyjson"
 	"io"
 	"strings"
 )
@@ -24,7 +25,7 @@ func getUsers(r io.Reader) (result users, err error) {
 	var user User
 	i := 0
 	for scanner.Scan() {
-		if err = user.parse(scanner.Text()); err != nil {
+		if err = easyjson.Unmarshal(scanner.Bytes(), &user); err != nil {
 			return
 		}
 		result[i] = user
