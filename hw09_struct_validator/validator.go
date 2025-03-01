@@ -1,17 +1,318 @@
 package hw09structvalidator
 
+import (
+	"errors"
+	"fmt"
+	"log/slog"
+	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+	"unicode/utf8"
+)
+
 type ValidationError struct {
 	Field string
 	Err   error
 }
 
+// System errors.
+var (
+	ErrInvalidIncomingValue = errors.New("invalid incoming value, expected structure")
+	ErrInvalidValidationTag = errors.New("invalid validation tag")
+)
+
+// Validation errors.
+var (
+	ErrIncorrectStrLength  = errors.New("the length of the string does not match the required one")
+	ErrIncorrectStrContent = errors.New("the string does not meet the requirements of the regular expression")
+	ErrUnexpectedValue     = errors.New("the value does not match the expected values")
+
+	ErrMinNotMet = errors.New("the value does not correspond to the min")
+	ErrMaxNotMet = errors.New("the value does not correspond to the max")
+)
+
 type ValidationErrors []ValidationError
 
 func (v ValidationErrors) Error() string {
-	panic("implement me")
+	var err string
+
+	for i := 0; i < len(v); i++ {
+		err += fmt.Sprintf("%v; ", v[i])
+	}
+
+	return err
+}
+
+type validationType interface {
+	string | int
 }
 
 func Validate(v interface{}) error {
-	// Place your code here.
+	if reflect.TypeOf(v).Kind() != reflect.Struct {
+		return ErrInvalidIncomingValue
+	}
+
+	validationErrors := make(ValidationErrors, 0)
+
+	val := reflect.ValueOf(v)
+	st := reflect.TypeOf(v)
+
+	for i := 0; i < st.NumField(); i++ {
+		field := st.Field(i)
+
+		validateTag, ok := field.Tag.Lookup("validate")
+		if !ok {
+			continue
+		}
+
+		var (
+			tp         = field.Type
+			kind       = tp.Kind()
+			reflectVal = val.Field(i)
+			fieldName  = field.Name
+			validators = strings.Split(validateTag, "|")
+		)
+
+		if kind == reflect.String || kind == reflect.Int {
+			fieldErrors, err := validateElem(kind, reflectVal, validators, fieldName, 0)
+			if err != nil {
+				slog.Error(err.Error())
+				return err
+			}
+
+			if fieldErrors != nil {
+				validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
+			}
+
+			continue
+		}
+
+		if kind == reflect.Slice {
+			var (
+				elemKind    = tp.Elem().Kind()
+				fieldErrors error
+			)
+
+			if elemKind == reflect.String || elemKind == reflect.Int {
+				for j := 0; j < reflectVal.Len(); j++ {
+					elemErrors, err := validateElem(elemKind, reflectVal.Index(j), validators, fieldName, j)
+					if err != nil {
+						slog.Error(err.Error())
+						return err
+					}
+
+					combineErrors(&fieldErrors, elemErrors, j)
+				}
+
+				validationErrors = append(validationErrors, ValidationError{Field: fieldName, Err: fieldErrors})
+			}
+		}
+	}
+
+	return validationErrors
+}
+
+func validateElem(elemKind reflect.Kind, value reflect.Value,
+	validators []string, fieldName string, idx int,
+) (elemErrors error, err error) {
+	if elemKind == reflect.String {
+		elemErrors, err = validate(value.String(), validators)
+	} else {
+		elemErrors, err = validate(int(value.Int()), validators)
+	}
+
+	if err != nil {
+		err = fmt.Errorf("validate %s %d elem err: %w", fieldName, idx, err)
+		return
+	}
+
+	return
+}
+
+func combineErrors(fieldErrors *error, elemErrors error, idx int) {
+	if elemErrors != nil {
+		elemErrors = fmt.Errorf("%d elem errors: %w", idx, elemErrors)
+
+		if *fieldErrors == nil {
+			*fieldErrors = elemErrors
+			return
+		}
+
+		*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, elemErrors)
+	}
+}
+
+func validate[T validationType](value T, validators []string) (error, error) {
+	var fieldErrors error
+
+	for i := 0; i < len(validators); i++ {
+		validator := strings.SplitN(validators[i], ":", 2)
+		if len(validator) < 2 {
+			return nil, ErrInvalidValidationTag
+		}
+
+		switch val := any(value).(type) {
+		case string:
+			err := validateLen(validator, val, &fieldErrors)
+			if err != nil {
+				return nil, err
+			}
+
+			err = validateRegexp(validator, val, &fieldErrors)
+			if err != nil {
+				return nil, err
+			}
+
+			err = validateIn(validator, val, &fieldErrors)
+			if err != nil {
+				return nil, err
+			}
+		case int:
+			err := validateMin(validator, val, &fieldErrors)
+			if err != nil {
+				return nil, err
+			}
+
+			err = validateMax(validator, val, &fieldErrors)
+			if err != nil {
+				return nil, err
+			}
+
+			err = validateIn(validator, val, &fieldErrors)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return fieldErrors, nil
+}
+
+func validateLen(validator []string, value string, fieldErrors *error) error {
+	if validator[0] == "len" {
+		length, err := strconv.Atoi(validator[1])
+		if err != nil {
+			return fmt.Errorf("parse len to int err: %w", err)
+		}
+
+		if utf8.RuneCountInString(value) == length {
+			return nil
+		}
+
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrIncorrectStrLength)
+		} else {
+			*fieldErrors = ErrIncorrectStrLength
+		}
+	}
+
+	return nil
+}
+
+func validateRegexp(validator []string, value string, fieldErrors *error) error {
+	if validator[0] == "regexp" {
+		re, err := regexp.Compile(validator[1])
+		if err != nil {
+			return fmt.Errorf("regexp.Compile err: %w", err)
+		}
+
+		ok := re.MatchString(value)
+		if ok {
+			return nil
+		}
+
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrIncorrectStrContent)
+		} else {
+			*fieldErrors = ErrIncorrectStrContent
+		}
+	}
+
+	return nil
+}
+
+func validateMin(validator []string, value int, fieldErrors *error) error {
+	if validator[0] == "min" {
+		minimum, err := strconv.Atoi(validator[1])
+		if err != nil {
+			return fmt.Errorf("parse min to int err: %w", err)
+		}
+
+		if value >= minimum {
+			return nil
+		}
+
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrMinNotMet)
+		} else {
+			*fieldErrors = ErrMinNotMet
+		}
+	}
+
+	return nil
+}
+
+func validateMax(validator []string, value int, fieldErrors *error) error {
+	if validator[0] == "max" {
+		maximum, err := strconv.Atoi(validator[1])
+		if err != nil {
+			return fmt.Errorf("parse max to int err: %w", err)
+		}
+
+		if value <= maximum {
+			return nil
+		}
+
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrMaxNotMet)
+		} else {
+			*fieldErrors = ErrMaxNotMet
+		}
+	}
+
+	return nil
+}
+
+func validateIn[T validationType](validator []string, value T, fieldErrors *error) error {
+	if validator[0] != "in" {
+		return nil
+	}
+
+	expectedValues := strings.Split(validator[1], ",")
+	var isSuccess bool
+
+	switch val := any(value).(type) {
+	case string:
+		for i := 0; i < len(expectedValues); i++ {
+			if expectedValues[i] == val {
+				isSuccess = true
+				break
+			}
+		}
+	case int:
+		for i := 0; i < len(expectedValues); i++ {
+			expectedValue, err := strconv.Atoi(expectedValues[i])
+			if err != nil {
+				return fmt.Errorf("parse expected value to int err: %w", err)
+			}
+
+			if expectedValue == val {
+				isSuccess = true
+				break
+			}
+		}
+	default:
+		return nil
+	}
+
+	if !isSuccess {
+		if *fieldErrors != nil {
+			*fieldErrors = fmt.Errorf("%w, %w", *fieldErrors, ErrUnexpectedValue)
+		} else {
+			*fieldErrors = ErrUnexpectedValue
+		}
+	}
+
 	return nil
 }

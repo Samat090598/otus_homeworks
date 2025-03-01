@@ -2,8 +2,11 @@ package hw09structvalidator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type UserRole string
@@ -34,6 +37,10 @@ type (
 		Code int    `validate:"in:200,404,500"`
 		Body string `json:"omitempty"`
 	}
+
+	Animal struct {
+		Name string `validate:"test"`
+	}
 )
 
 func TestValidate(t *testing.T) {
@@ -42,19 +49,60 @@ func TestValidate(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			// Place your code here.
+			in: User{
+				ID:     "1",
+				Name:   "John",
+				Age:    17,
+				Email:  "john.dow@gmail.com",
+				Role:   "guest",
+				Phones: []string{"11111111111", "2222222222", "333333333"},
+			},
+			expectedErr: fmt.Errorf("{ID %w}; {Age %w}; {Email %w}; {Role %w}; {Phones 1 elem errors: %w, 2 elem errors: %w}; ",
+				ErrIncorrectStrLength,
+				ErrMinNotMet,
+				ErrIncorrectStrContent,
+				ErrUnexpectedValue,
+				ErrIncorrectStrLength,
+				ErrIncorrectStrLength),
 		},
-		// ...
-		// Place your code here.
+		{
+			in:          App{Version: "123456"},
+			expectedErr: fmt.Errorf("{Version %w}; ", ErrIncorrectStrLength),
+		},
+		{
+			in: Token{
+				Header:    make([]byte, 0),
+				Payload:   make([]byte, 0),
+				Signature: make([]byte, 0),
+			},
+			expectedErr: errors.New(""),
+		},
+		{
+			in: Response{
+				Code: 200,
+				Body: "",
+			},
+			expectedErr: errors.New(""),
+		},
 	}
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
-			tt := tt
 			t.Parallel()
 
-			// Place your code here.
-			_ = tt
+			err := Validate(tt.in)
+			require.ErrorAs(t, err, &ValidationErrors{})
+			require.EqualError(t, err, tt.expectedErr.Error())
 		})
 	}
+
+	t.Run("invalid incoming value", func(t *testing.T) {
+		err := Validate("test")
+		require.EqualError(t, err, ErrInvalidIncomingValue.Error())
+	})
+
+	t.Run("invalid validation tag", func(t *testing.T) {
+		err := Validate(Animal{Name: "Dog"})
+		require.ErrorIs(t, err, ErrInvalidValidationTag)
+	})
 }
