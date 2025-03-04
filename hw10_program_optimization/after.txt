@@ -1,0 +1,6 @@
+=== RUN   TestGetDomainStat_Time_And_Memory
+    stats_optimization_test.go:46: time used: 132.850625ms / 300ms
+    stats_optimization_test.go:47: memory used: 12Mb / 30Mb
+--- PASS: TestGetDomainStat_Time_And_Memory (1.50s)
+PASS
+ok  	github.com/Samat090598/otus_homeworks/hw10_program_optimization	2.911s
