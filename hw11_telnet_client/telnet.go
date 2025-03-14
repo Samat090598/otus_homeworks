@@ -33,7 +33,7 @@ type telnetClient struct {
 }
 
 func (t *telnetClient) Connect() error {
-	conn, err := net.Dial("tcp", t.address)
+	conn, err := net.DialTimeout("tcp", t.address, t.timeout)
 	if err != nil {
 		return fmt.Errorf("dial err: %w", err)
 	}
