@@ -64,6 +64,13 @@ func (t *telnetClient) Send() error {
 	}
 
 	_, err := io.Copy(t.conn, t.in)
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, io.EOF) {
+		return t.Close()
+	}
 
 	return err
 }
@@ -74,6 +81,13 @@ func (t *telnetClient) Receive() error {
 	}
 
 	_, err := io.Copy(t.out, t.conn)
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, io.EOF) {
+		return t.Close()
+	}
 
 	return err
 }
