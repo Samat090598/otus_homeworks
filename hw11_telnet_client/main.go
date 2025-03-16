@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -17,7 +18,7 @@ func main() {
 	args := flag.Args()
 	if len(args) < 2 {
 		slog.Error("not enough arguments")
-		os.Exit(1)
+		return
 	}
 
 	host := args[0]
@@ -26,25 +27,25 @@ func main() {
 
 	client := NewTelnetClient(address, timeout, os.Stdin, os.Stdout)
 	if err := client.Connect(); err != nil {
-		slog.Error("connect err:", err)
-		os.Exit(1)
+		slog.Error(fmt.Errorf("connect err: %w", err).Error())
+		return
 	}
 	defer func() {
 		if err := client.Close(); err != nil {
-			slog.Error("close err:", err)
-			os.Exit(1)
+			slog.Error(fmt.Errorf("close err: %w", err).Error())
+			return
 		}
 	}()
 
 	go func() {
 		if err := client.Receive(); err != nil {
-			slog.Error("receive err:", err)
-			os.Exit(1)
+			slog.Error(fmt.Errorf("receive err: %w", err).Error())
+			return
 		}
 	}()
 
 	if err := client.Send(); err != nil {
-		slog.Error("send err:", err)
-		os.Exit(1)
+		slog.Error(fmt.Errorf("send err: %w", err).Error())
+		return
 	}
 }
