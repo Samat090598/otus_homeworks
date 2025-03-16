@@ -80,7 +80,7 @@ func TestTelnetClient(t *testing.T) {
 	})
 
 	t.Run("out is nul", func(t *testing.T) {
-		client := NewTelnetClient("127.0.0.1:", timeout, nil, out)
+		client := NewTelnetClient("127.0.0.1:", timeout, io.NopCloser(in), nil)
 		err := client.Connect()
 		require.Error(t, err)
 	})
