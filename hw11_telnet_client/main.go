@@ -41,6 +41,7 @@ func main() {
 	}()
 
 	errCh := make(chan error)
+
 	go func() {
 		errCh <- client.Send()
 	}()
