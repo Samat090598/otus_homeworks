@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
-	"log/slog"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -20,7 +19,7 @@ func main() {
 
 	args := flag.Args()
 	if len(args) < 2 {
-		slog.Error("not enough arguments")
+		log.Fatal("not enough arguments")
 		return
 	}
 
@@ -30,12 +29,12 @@ func main() {
 
 	client := NewTelnetClient(address, timeout, os.Stdin, os.Stdout)
 	if err := client.Connect(); err != nil {
-		slog.Error(fmt.Errorf("connect err: %w", err).Error())
+		log.Fatalf("connect err: %v", err)
 		return
 	}
 	defer func() {
 		if err := client.Close(); err != nil {
-			slog.Error(fmt.Errorf("close err: %w", err).Error())
+			log.Fatalf("close err: %v", err)
 			return
 		}
 	}()
@@ -56,6 +55,6 @@ func main() {
 	select {
 	case <-ctx.Done():
 	case err := <-errCh:
-		slog.Error(err.Error())
+		log.Printf("error: %v", err)
 	}
 }
