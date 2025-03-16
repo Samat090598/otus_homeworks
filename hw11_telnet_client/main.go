@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -37,15 +40,20 @@ func main() {
 		}
 	}()
 
+	errCh := make(chan error)
 	go func() {
-		if err := client.Receive(); err != nil {
-			slog.Error(fmt.Errorf("receive err: %w", err).Error())
-			return
-		}
+		errCh <- client.Send()
+	}()
+	go func() {
+		errCh <- client.Receive()
 	}()
 
-	if err := client.Send(); err != nil {
-		slog.Error(fmt.Errorf("send err: %w", err).Error())
-		return
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case <-ctx.Done():
+	case err := <-errCh:
+		slog.Error(err.Error())
 	}
 }
