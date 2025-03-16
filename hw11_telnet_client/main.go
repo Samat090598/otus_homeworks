@@ -47,6 +47,7 @@ func main() {
 	go func() {
 		errCh <- client.Receive()
 	}()
+	defer close(errCh)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
