@@ -43,7 +43,7 @@ func (t *telnetClient) Connect() error {
 }
 
 func (t *telnetClient) Close() error {
-	if t.conn != nil {
+	if t.conn == nil {
 		return errors.New("there is no active connection")
 	}
 
