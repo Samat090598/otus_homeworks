@@ -62,4 +62,26 @@ func TestTelnetClient(t *testing.T) {
 
 		wg.Wait()
 	})
+
+	in := &bytes.Buffer{}
+	out := &bytes.Buffer{}
+	timeout, _ := time.ParseDuration("10s")
+
+	t.Run("incorrect address", func(t *testing.T) {
+		client := NewTelnetClient("test", timeout, io.NopCloser(in), out)
+		err := client.Connect()
+		require.Error(t, err)
+	})
+
+	t.Run("in is nil", func(t *testing.T) {
+		client := NewTelnetClient("127.0.0.1:", timeout, nil, out)
+		err := client.Connect()
+		require.Error(t, err)
+	})
+
+	t.Run("out is nil", func(t *testing.T) {
+		client := NewTelnetClient("127.0.0.1:", timeout, io.NopCloser(in), nil)
+		err := client.Connect()
+		require.Error(t, err)
+	})
 }
