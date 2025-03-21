@@ -20,7 +20,6 @@ func main() {
 	args := flag.Args()
 	if len(args) < 2 {
 		log.Fatal("not enough arguments")
-		return
 	}
 
 	host := args[0]
@@ -30,12 +29,10 @@ func main() {
 	client := NewTelnetClient(address, timeout, os.Stdin, os.Stdout)
 	if err := client.Connect(); err != nil {
 		log.Fatalf("connect err: %v", err)
-		return
 	}
 	defer func() {
 		if err := client.Close(); err != nil {
 			log.Fatalf("close err: %v", err)
-			return
 		}
 	}()
 
